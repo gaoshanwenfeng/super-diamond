@@ -12,21 +12,8 @@ import org.junit.Test;
  */
 public class PropertiesConfigurationTest {
 	
-	@Test
-	public void testConfig() throws ConfigurationRuntimeException  {
-		String config = "username = melin \r\n";
-		config += "port=8000 \r\n";
-		config += "reload=true \r\n";
-		
-		PropertiesConfiguration configuration = new PropertiesConfiguration();
-		configuration.load(config);
-		
-		Assert.assertEquals("melin", configuration.getString("username"));
-		Assert.assertEquals(8000, configuration.getInt("port"));
-		Assert.assertTrue(configuration.getBoolean("reload"));
-	}
 	
-	@Test
+
 	public void testInterpolator() throws ConfigurationRuntimeException  {
 		String config = "app.home = /tmp/home \r\n";
 		config += "zk.home=${app.home}/zk \r\n";
@@ -40,7 +27,7 @@ public class PropertiesConfigurationTest {
 		Assert.assertEquals("/tmp/home/hbase", configuration.getString("hbase.home"));
 	}
 
-	@Test
+
 	public void testSysProperties() throws ConfigurationRuntimeException  {
 		String config = "javaVersion = ${sys:java.version} \r\n";
 		
@@ -50,7 +37,7 @@ public class PropertiesConfigurationTest {
 		Assert.assertEquals(System.getProperty("java.version"), configuration.getString("javaVersion"));
 	}
 	
-	@Test
+
 	public void testSysEvns() throws ConfigurationRuntimeException  {
 		String config = "javaHome = ${env:JAVA_HOME}/lib \r\n";
 		
