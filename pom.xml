@@ -211,14 +211,5 @@
 		</plugins>
 	</build>
 
-   <distributionManagement>
-		<repository>
-			<id>nexus-releases</id>
-	   		<url>http://nexus.hitravel.com/repository/mvn_release</url>
-		</repository>
-		<snapshotRepository>
-			<id>nexus-snapshots</id>
-	   		<url>http://nexus.hitravel.com/repository/mvn_snapshot</url>
-		</snapshotRepository>
-   </distributionManagement>
+
 </project>
