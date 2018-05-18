@@ -27,6 +27,7 @@ import com.github.diamond.client.config.PropertiesReader;
 import com.github.diamond.client.config.PropertyConverter;
 import com.github.diamond.client.event.EventSource;
 import com.github.diamond.client.event.EventType;
+import com.github.diamond.client.event.listener.ConfigurationEventListener;
 import com.github.diamond.client.netty.ClientChannelInitializer;
 import com.github.diamond.client.netty.Netty4Client;
 import com.github.diamond.client.util.FileUtils;
@@ -34,7 +35,7 @@ import com.github.diamond.client.util.NamedThreadFactory;
 
 /**
  * Create on @2013-8-25 @下午1:17:38
- * 
+ * @update by gaofeng 2018/05/18
  * @author bsli@ustcinfo.com
  */
 public class PropertiesConfiguration extends EventSource {
@@ -51,11 +52,11 @@ public class PropertiesConfiguration extends EventSource {
 	
 	private static final ExecutorService reloadExecutorService = Executors.newSingleThreadExecutor(new NamedThreadFactory("ReloadConfigExecutorService", true));
 	
-	private static String _host;
-	private static int _port = 0;
-	private static String _projCode;
-	private static String _profile;
-	private static String _modules;
+	private static String serverHost;
+	private static int serverPort = 0;
+	private static String projCode;
+	private static String profile;
+	private static String modules;
 	
 	private static final long FIRST_CONNECT_TIMEOUT = 2;
 	
@@ -66,13 +67,13 @@ public class PropertiesConfiguration extends EventSource {
 	 * @param profile
 	 */
 	public PropertiesConfiguration() {
-		_host = getHost();
-		_port = getPort();
-		_projCode = getProjCode();
-		_profile = getProfile();
-		_modules = getModules();
+		serverHost = getHost();
+		serverPort = getPort();
+		projCode = getProjCode();
+		profile = getProfile();
+		modules = getModules();
 		
-		connectServer(_host, _port, _projCode, _profile, _modules);
+		connectServer(serverHost, serverPort, projCode, profile, modules);
 		substitutor = new StrSubstitutor(createInterpolator());
 	}
 
@@ -82,14 +83,14 @@ public class PropertiesConfiguration extends EventSource {
 	 * @param projCode
 	 * @param profile
 	 */
-	public PropertiesConfiguration(final String projCode, final String profile) {
-		_host = getHost();
-		_port = getPort();
-		_projCode = projCode;
-		_profile = profile;
-		_modules = "";
+	public PropertiesConfiguration(String _projCode, String _profile) {
+		serverHost = getHost();
+		serverPort = getPort();
+		projCode = _projCode;
+		profile = _profile;
+		modules = "";
 		
-		connectServer(_host, _port, _projCode, _profile, _modules);
+		connectServer(serverHost, serverPort, projCode, profile, modules);
 		substitutor = new StrSubstitutor(createInterpolator());
 	}
 	
@@ -99,44 +100,56 @@ public class PropertiesConfiguration extends EventSource {
 	 * @param projCode
 	 * @param profile
 	 */
-	public PropertiesConfiguration(final String projCode, final String profile, String modules) {
-		_host = getHost();
-		_port = getPort();
-		_projCode = projCode;
-		_profile = profile;
-		_modules = modules;
+	public PropertiesConfiguration(final String _projCode, String _profile, String _modules) {
+		serverHost = getHost();
+		serverPort = getPort();
+		projCode = _projCode;
+		profile = _profile;
+		modules = _modules;
 		
-		connectServer(_host, _port, _projCode, _profile, _modules);
+		connectServer(serverHost, serverPort, projCode, profile, modules);
 		substitutor = new StrSubstitutor(createInterpolator());
 	}
 
-	public PropertiesConfiguration(String host, int port, final String projCode, final String profile) {
-		_host = host;
-		_port = port;
-		_projCode = projCode;
-		_profile = profile;
-		_modules = "";
+	public PropertiesConfiguration(String host, int port, String _projCode, String _profile) {
+		serverHost = host;
+		serverPort = port;
+		projCode = _projCode;
+		profile = _profile;
+		modules = "";
 		
-		connectServer(_host, _port, _projCode, _profile, _modules);
+		connectServer(serverHost, serverPort, projCode, profile, modules);
 		substitutor = new StrSubstitutor(createInterpolator());
 	}
 	
-	public PropertiesConfiguration(String host, int port, final String projCode, final String profile, String modules) {
-		_host = host;
-		_port = port;
-		_projCode = projCode;
-		_profile = profile;
-		_modules = modules;
+	public PropertiesConfiguration(String host, int port, String _projCode, String _profile, String _modules) {
+		serverHost = host;
+		serverPort = port;
+		projCode = _projCode;
+		profile = _profile;
+		modules = _modules;
 		
-		connectServer(_host, _port, _projCode, _profile, _modules);
+		connectServer(serverHost, serverPort, projCode, profile, modules);
+		substitutor = new StrSubstitutor(createInterpolator());
+	}
+	
+	public PropertiesConfiguration(String host, int port, String _projCode, String _profile, String _modules, ConfigurationEventListener listener) {
+		serverHost = host;
+		serverPort = port;
+		projCode = _projCode;
+		profile = _profile;
+		modules = _modules;
+		if (listener != null) {
+			this.addConfigurationListener(listener);
+		}
+		connectServer(serverHost, serverPort, projCode, profile, modules);
 		substitutor = new StrSubstitutor(createInterpolator());
 	}
 	
 	protected void connectServer(String host, int port, final String projCode, final String profile, final String modules) {
 		Assert.notNull(projCode, "连接superdiamond， projCode不能为空");
 		
-		final String clientMsg = "superdiamond={\"projCode\": \"" + projCode + "\", \"profile\": \"" + profile + "\", "
-				+ "\"modules\": \"" + modules + "\", \"version\": \"1.1.0\"}";
+		final String clientMsg = "superdiamond={\"projCode\": \"" + projCode + "\", \"profile\": \"" + profile + "\", " + "\"modules\": \"" + modules + "\", \"version\": \"1.2.0\"}";
 		try {
 			client = new Netty4Client(host, port, new ClientChannelInitializer(clientMsg));
 			
@@ -164,14 +177,12 @@ public class PropertiesConfiguration extends EventSource {
 			}
 			
 			reloadExecutorService.submit(new Runnable() {
-				
 				@Override
 				public void run() {
 					while(reloadable) {
 						try {
 							if(client.isConnected()) {
 								String message = client.receiveMessage();
-								
 								if(message != null) {
 									String versionStr = message.substring(0, message.indexOf("\r\n"));
 									LOGGER.info("重新加载配置信息，项目编码：{}，Profile：{}, Version：{}", projCode, profile, versionStr.split(" = ")[1]);
@@ -197,7 +208,6 @@ public class PropertiesConfiguration extends EventSource {
 	
 	public void close() {
 		reloadable = false;
-		
 		if(client != null && client.isConnected())
 			client.close();
 	}
@@ -253,56 +263,56 @@ public class PropertiesConfiguration extends EventSource {
 	}
 	
 	public static String getProjCode() {
-		if(StringUtils.isNotBlank(_projCode))
-			return _projCode;
+		if(StringUtils.isNotBlank(projCode))
+			return projCode;
 		
-		_projCode = System.getenv("SUPERDIAMOND_PROJCODE");
-		if(StringUtils.isBlank(_projCode)) {
+		projCode = System.getenv("SUPERDIAMONDprojCode");
+		if(StringUtils.isBlank(projCode)) {
 			return System.getProperty("superdiamond.projcode");
 		} else {
-			return _projCode;
+			return projCode;
 		}
 	}
 	
 	public static String getProfile() {
-		if(StringUtils.isNotBlank(_profile))
-			return _profile;
+		if(StringUtils.isNotBlank(profile))
+			return profile;
 		
-		_profile = System.getenv("SUPERDIAMOND_PROFILE");
-		if(StringUtils.isBlank(_profile)) {
+		profile = System.getenv("SUPERDIAMOND_PROFILE");
+		if(StringUtils.isBlank(profile)) {
 			return System.getProperty("superdiamond.profile", "development");
 		} else {
-			return _profile;
+			return profile;
 		}
 	}
 	
 	public static String getModules() {
-		if(StringUtils.isNotBlank(_modules))
-			return _modules;
+		if(StringUtils.isNotBlank(modules))
+			return modules;
 		
-		_modules = System.getenv("SUPERDIAMOND_MODULES");
-		if(StringUtils.isBlank(_modules)) {
+		modules = System.getenv("SUPERDIAMOND_MODULES");
+		if(StringUtils.isBlank(modules)) {
 			return System.getProperty("superdiamond.modules");
 		} else {
-			return _modules;
+			return modules;
 		}
 	}
 	
 	public static String getHost() {
-		if(StringUtils.isNotBlank(_host))
-			return _host;
+		if(StringUtils.isNotBlank(serverHost))
+			return serverHost;
 		
-		_host = System.getenv("SUPERDIAMOND_HOST");
-		if(StringUtils.isBlank(_host)) {
+		serverHost = System.getenv("SUPERDIAMOND_HOST");
+		if(StringUtils.isBlank(serverHost)) {
 			return System.getProperty("superdiamond.host", "localhost");
 		} else {
-			return _host;
+			return serverHost;
 		}
 	}
 	
 	public static int getPort() {
-		if(_port > 1)
-			return _port;
+		if(serverPort > 1)
+			return serverPort;
 			
 		if(StringUtils.isBlank(System.getenv("SUPERDIAMOND_PORT"))) {
 			return Integer.valueOf(System.getProperty("superdiamond.port", "8283"));
@@ -386,8 +396,7 @@ public class PropertiesConfiguration extends EventSource {
 		if (d != null) {
 			return d.doubleValue();
 		} else {
-			throw new NoSuchElementException('\'' + key
-					+ "' doesn't map to an existing object");
+			throw new NoSuchElementException('\'' + key + "' doesn't map to an existing object");
 		}
 	}
 
@@ -549,8 +558,7 @@ public class PropertiesConfiguration extends EventSource {
 
 	protected ConfigurationInterpolator createInterpolator() {
         ConfigurationInterpolator interpol = new ConfigurationInterpolator();
-        interpol.setDefaultLookup(new StrLookup()
-        {
+        interpol.setDefaultLookup(new StrLookup() {
             @Override
             public String lookup(String var)
             {
@@ -560,4 +568,6 @@ public class PropertiesConfiguration extends EventSource {
         });
         return interpol;
     }
+	
+	
 }

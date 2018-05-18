@@ -23,16 +23,16 @@ import com.github.diamond.client.event.ConfigurationListener;
  * @author gaofeng
  * @time 2018/05/18
  */
-public class ConfigurationChangedListener extends ApplicationObjectSupport implements ConfigurationListener {
+public class ConfigurationEventListener extends ApplicationObjectSupport implements ConfigurationListener {
 
 	private static final Map<String, List<String>> classInfo = new ConcurrentHashMap<String, List<String>>();
-	private static final Logger logger = LoggerFactory.getLogger(ConfigurationChangedListener.class);
+	private static final Logger logger = LoggerFactory.getLogger(ConfigurationEventListener.class);
 	private static final boolean useClassCache = false;
 	private static boolean beanScaned = false;
 
 	private boolean inited = false;
 
-	public ConfigurationChangedListener() {
+	public ConfigurationEventListener() {
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
@@ -61,8 +61,7 @@ public class ConfigurationChangedListener extends ApplicationObjectSupport imple
 		logger.info("收到配置变更事件：" + propName + "->" + propValue);
 		if (inited && ctx != null) {
 			if (ctx instanceof AbstractRefreshableApplicationContext) {
-				ConfigurableListableBeanFactory factory = ((AbstractRefreshableApplicationContext) ctx)
-						.getBeanFactory();
+				ConfigurableListableBeanFactory factory = ((AbstractRefreshableApplicationContext) ctx).getBeanFactory();
 				if (useClassCache) {
 					if (!beanScaned) {
 						synchronized (this) {
@@ -107,7 +106,6 @@ public class ConfigurationChangedListener extends ApplicationObjectSupport imple
 				}
 			} else {
 				logger.warn("配置变更不支持的AppContext类型：" + ctx.getClass().getName());
-
 			}
 		} else {
 			logger.info("配置变更监听初始化未完成。无法处理变动");
