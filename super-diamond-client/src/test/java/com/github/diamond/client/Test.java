@@ -18,7 +18,7 @@ public class Test {
 	 * @throws ConfigurationException
 	 */
 	public static void main(String[] args) throws Exception {
-		PropertiesConfiguration config = new PropertiesConfiguration("10.70.209.165", 8089, "10010", "development", "runntime.properties");
+		PropertiesConfiguration config = new PropertiesConfiguration("10.70.209.165", 8099, "100010", "development", "runntime.properties");
 		config.addConfigurationListener(new ConfigurationListenerTest());
 		System.out.println(config.getString("test_key"));
 	}
